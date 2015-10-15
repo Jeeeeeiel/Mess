@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -92,26 +93,46 @@ public class TableExtractor {
 		}
 	}
 	
-	public static void extractFromDoc(File file){
+	private static Process process = null;
+	
+	public static void extractFromDoc(final File file){
         try {
         	File exePath = new File(DOC2DOCX_PATH);
         	System.out.println(exePath.getAbsolutePath());
-        	String cmdStr = exePath.getAbsolutePath() + " " + file.getAbsolutePath();
+        	final String cmdStr = exePath.getAbsolutePath() + " " + file.getAbsolutePath();
         	System.out.println(cmdStr);
-			Process process =  Runtime.getRuntime().exec(cmdStr);
+			Thread t = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					try {
+						process = Runtime.getRuntime().exec(cmdStr);
+						process.waitFor();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			});
+			t.start();
+			t.join(10000);
 			File newfile = new File(file.getAbsolutePath() + "x");
 			if(newfile.exists()){
 				System.out.println("转换成功: " + newfile.getAbsolutePath());
 				extractFromDocx(newfile);
 			}else{
 				System.out.println("转换失败: " + file.getAbsolutePath());
-				process.destroy();
+				if(process != null){
+					process.destroy();
+				}
 			}
-		} catch (IOException e) {
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-		
+		} 
 	}
 	
 	public static void extractFromDocx(File file){
