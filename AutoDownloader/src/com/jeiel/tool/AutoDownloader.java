@@ -278,7 +278,9 @@ public class AutoDownloader {
 	public static void generateFileName(){//格式化文件名
 		for(PDF pdf : pdfs){
 			String date = pdf.getTime().split(" ")[0].replace("-", "");
-			String name = pdf.getName().substring(0, pdf.getName().lastIndexOf("-")).replace("*", "");
+			String name = pdf.getName().substring(0, pdf.getName().lastIndexOf("-")).replace("*", "")
+					.replace("\\", "").replace("/", "").replace("<", "").replace(">", "")
+					.replace("?", "").replace("|", "").replace("\"", "").replace(":", "");
 			String suffix = pdf.getUrl().substring(pdf.getUrl().lastIndexOf("."));
 			pdf.setFileName(date + "-" + name + suffix);
 			//Log.log(pdf.getFileName());
