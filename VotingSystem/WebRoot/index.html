@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="">
+  	<head>
+    	<title>深圳金融创新奖投票系统</title>
+    	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    	<meta name="viewport" content="width=device-width, initial-scale=1">
+	    <script src="dist/js/jquery.min.js"></script>
+	    <script src="dist/js/bootstrap.min.js"></script>
+	    <link href="dist/css/bootstrap-theme.css" rel="stylesheet">
+	    <link href="dist/css/bootstrap.css" rel="stylesheet">   
+	    <link href="dist/css/custome.css" rel="stylesheet">
+	 	<script src="dist/js/custome.js"></script>
+	    <script src="ickeck/icheck.js"></script>
+	    <script src="ickeck/js/custom.min.js"></script>
+	    <link href="ickeck/skins/all.css" rel="stylesheet"> 
+		<script type="text/javascript">
+			$(document).ready(function(){
+				$('#spinner').hide();
+			});
+			
+		</script>
+  	</head>
+
+  	<body onload="checkCookie();">
+		<div id="spinner" class="spinner">
+			  <div class="rect1"></div>
+			  <div class="rect2"></div>
+			  <div class="rect3"></div>
+			  <div class="rect4"></div>
+			  <div class="rect5"></div>
+		</div>
+        <div class="container-fluid" style="margin-top:1%">
+        	<div class="jumbotron">
+			  	<h1 id="head" style="font-weight:bold;margin-left:3%"></h1>
+			  	<p style="font-weight:bold;margin-left:3%">深圳市金融创新奖</p>
+			</div>
+          	<ul id="list-group" class="list-group">
+          	</ul>
+        </div>
+        <div id="data_container">            
+        </div>
+
+	
+		<div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+		  	<div class="modal-dialog" role="document">
+		    	<div class="modal-content">
+		      	<div class="modal-header">
+		        	<h2 class="modal-title" id="exampleModalLabel" style="font-weight:bold;text-align:center">深圳市金融创新奖</h2>
+		      	</div>
+		      	<div class="modal-body">
+		        	<form>
+		          	<div class="form-group">
+		            	<label for="recipient-name" class="control-label">姓名:</label>
+		            	<input type="text" class="form-control" id="name">
+		          	</div>
+		          	<div class="form-group">
+		            	<label for="message-text" class="control-label">口令:</label>
+		            	<input type="password" class="form-control" id="password">
+		          	</div>
+		        	</form>
+		      	</div>
+		      	<div class="modal-footer">
+		        	<button type="button" class="btn btn-primary" onclick="login()">登 陆</button>
+		      	</div>
+		    	</div>
+		  	</div>
+		</div>
+  	</body>
+</html>
