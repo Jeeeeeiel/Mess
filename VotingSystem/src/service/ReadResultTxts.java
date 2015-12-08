@@ -12,7 +12,7 @@ public class ReadResultTxts {
 	{
 		BufferedReader br = null;
 
-		String VoteName=VoteInfo.getVoteName();
+		String VoteName=VoteInfo.getVoteName().replaceAll("\\|[\\S\\s]*", "");
 		
 		ArrayList<String> filenames=new ArrayList<String>();
 		try {

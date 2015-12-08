@@ -4,14 +4,14 @@ package service;
 public class VoteInfo {
 	public static String VoteName="";
 	public static int ProjectNum=0;
-	public static String ExcelPath="e:/VoteList.xlsx";
+	public static String ExcelPath="d:/VoteList.xlsx";
 	public static String getDataRootPath() {
 		return DataRootPath;
 	}
 	public static void setDataRootPath(String dataRootPath) {
 		DataRootPath = dataRootPath;
 	}
-	public static String DataRootPath="e://Vote2015/";
+	public static String DataRootPath="d://Vote2015/";
 	public static String getExcelPath() {
 		return ExcelPath;
 	}

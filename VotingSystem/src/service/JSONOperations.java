@@ -81,8 +81,8 @@ public class JSONOperations {
 			JSONObject json = JSONObject.fromObject(str);
 			String id=(String)json.get("id");
 			String JudgeName=(String)json.get("JudgeName");
-			String WebVoteName=(String)json.get("VoteName");
-			String VoteName=VoteInfo.getVoteName();
+			String WebVoteName=((String)json.get("VoteName")).replaceAll("\\|[\\S\\s]*", "");
+			String VoteName=VoteInfo.getVoteName().replaceAll("\\|[\\S\\s]*", "");
 			if(!VoteName.equals(WebVoteName))
 			{
 				return "VoteName outdate";
