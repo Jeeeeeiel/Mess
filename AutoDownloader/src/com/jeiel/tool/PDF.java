@@ -5,6 +5,8 @@ public class PDF {
 	private String time;
 	private String url;
 	private String fileName;
+	private boolean distributed;
+	private boolean downloaded;
 	public String getName() {
 		return name;
 	}
@@ -28,6 +30,18 @@ public class PDF {
 	}
 	public void setFileName(String fileName) {
 		this.fileName = fileName;
+	}
+	public boolean isDistributed() {
+		return distributed;
+	}
+	public void setDistributed(boolean distributed) {
+		this.distributed = distributed;
+	}
+	public boolean isDownloaded() {
+		return downloaded;
+	}
+	public void setDownloaded(boolean downloaded) {
+		this.downloaded = downloaded;
 	}
 	
 }

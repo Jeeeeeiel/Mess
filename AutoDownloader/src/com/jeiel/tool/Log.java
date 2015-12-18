@@ -10,7 +10,7 @@ public class Log{
 	public static FileOutputStream fos = null;
 	
 	static{
-		logFile = new File(AutoDownloader.ROOT_DIR_PATH + "/tmp.log");
+		logFile = new File(AutoDownloaderMultiThread.ROOT_DIR_PATH + "/tmp.log");
 		if(logFile.exists()){
 			logFile.delete();
 		}

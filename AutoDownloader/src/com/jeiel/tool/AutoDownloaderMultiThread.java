@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -17,6 +18,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -27,22 +31,24 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import com.jeiel.mailutls.MailSender;
 
-public class AutoDownloader {
+
+public class AutoDownloaderMultiThread {
 	
 	public static final String URL = "http://sys.hibor.com.cn/center/maibo/qikanzuixin.asp?page=";
 	public static final String params = "&abc=&def=&vidd=&keyy=&F_F=13&pagenumber=&recordnumbe";
-	public static final String ROOT_DIR_PATH = "d://DailyPDF";
+	public static final String ROOT_DIR_PATH = "d://DailyPDFMultiThread";
 	public static final String TARGET_DIR_PATH = "d://WBWJ_YBDOWNLOAD";
+	public static final int MAX_THREAD_AMOUT = 20;
 	private static String nextWorkDate = null;
 	private static String beginTime = "";
 	private static List<PDF> pdfs = new ArrayList<PDF>();
 	private static boolean getElementsSucceed = false;
 	private static boolean initializationSucceed = false;
-	private static boolean downloadSucceed = false;
 	private static boolean extractPDFURLSucceed = false;
-	private static int downloaded = 0;
 	private static int extracted = 0;
+	
 
 	static{
 		File rootDir = new File(ROOT_DIR_PATH);
@@ -67,14 +73,19 @@ public class AutoDownloader {
 			ExtractPDFURL();
 		}
 		generateFileName();
+		
 		Log.log("Downloading...");
-		while(!downloadSucceed){
-			download();
-		}
+		startWork();
 		checkDownloadedFile();
 		record();
 		copyReportsToTargetDir();
 		Log.log("Done");
+		if(MailSender.remind(nextWorkDate)){
+			Log.log("Succeed!");
+		}else{
+			Log.log("Failed!");
+		}
+		
 		Log.closeLogFile();
 		Log.copyTo(ROOT_DIR_PATH, nextWorkDate + ".log");
 	}
@@ -87,33 +98,6 @@ public class AutoDownloader {
 	}
 	
 	public static void getNextWorkDate(){
-		/*boolean isNextWorkDate = false;
-		Scanner in = new Scanner(System.in);
-		do{
-			if(nextWorkDate == null || nextWorkDate.equals("")){
-				SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
-				Calendar calendar = Calendar.getInstance();
-				do{
-					calendar.add(Calendar.DAY_OF_MONTH, 1);
-				}while(isHoliday(calendar));
-				nextWorkDate = format.format(calendar.getTime());
-			}
-			Log.log("Next work Date: " + nextWorkDate);
-			Log.log("Comfirm(Y/N): ");
-			String next = in.next();
-			Log.log(next);
-			if(next.length() == 1){
-				if(next.toUpperCase().equals("Y")){
-					isNextWorkDate = true;
-				}else if(next.toUpperCase().equals("N")){
-					Log.log("Input next work date(yyyyMMdd): ");
-					nextWorkDate = in.next();
-					isNextWorkDate = false;
-				}
-			}
-		}while(!isNextWorkDate);
-		in.close();*/
-		
 		if(nextWorkDate == null || nextWorkDate.equals("")){
 			SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 			Calendar calendar = Calendar.getInstance();
@@ -233,6 +217,7 @@ public class AutoDownloader {
 			if(beginTime == null || beginTime.equals("")){//没有历史记录,下载当天
 				SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 				beginTime = format.format(new Date()) + " 00:00:00";
+				Log.log("beginTime: " + beginTime);
 			}
 			boolean completed = false;
 			getElementsSucceed = false;
@@ -297,59 +282,6 @@ public class AutoDownloader {
 		}
 	}
 	
-	public static void download(){
-		OutputStream os = null;
-		InputStream is = null;
-		File dir = new File(ROOT_DIR_PATH + "/" +nextWorkDate);
-		if(!dir.exists()){
-			dir.mkdirs();
-		}
-		try {
-			for(PDF pdf : pdfs){
-				if(downloaded > pdfs.indexOf(pdf)){
-					continue;
-				}
-				URL url = new URL(pdf.getUrl()); 
-				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-				conn.setConnectTimeout(10000);;
-				conn.setReadTimeout(60000);
-				File file = new File(dir, pdf.getFileName());
-				if(!file.exists()){
-					file.createNewFile();
-				}
-				os = new FileOutputStream(file);
-				is = conn.getInputStream();
-				byte[] bytes = new byte[10240];
-				int len = 0;
-				while((len = is.read(bytes)) > 0){
-					os.write(bytes, 0, len);
-				}
-				downloaded++;
-				Log.log("Downloaded: " + downloaded + "\t" + 
-						pdf.getName().substring(0, pdf.getName().indexOf("-", pdf.getName().indexOf("-", pdf.getName().indexOf("-") + 1) + 1)) + "   \t" + 
-						pdf.getTime());
-			}
-			downloadSucceed = true;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			Log.log(e.getMessage());
-			e.printStackTrace();
-		}finally{
-			try {
-				if(os != null){
-					os.close();
-				}
-				if(is != null){
-					is.close();
-				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				Log.log(e.getMessage());
-				e.printStackTrace();
-			}
-		}
-	}
-	
 	public static void ExtractPDFURL(){//抽取网页中frame中的研报链接
 		try {
 			for(PDF pdf : pdfs){
@@ -373,6 +305,110 @@ public class AutoDownloader {
 			Log.log(e.getMessage());
 			e.printStackTrace();
 		}
+		
+	}
+	
+	public static void startWork(){
+		ExecutorService pool = Executors.newCachedThreadPool();
+		for(int i = 0; i < MAX_THREAD_AMOUT; i++){
+			pool.execute(new Runnable() {
+				
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub;
+					Log.log(Thread.currentThread().getName() + " start");
+					while(hasNextUnhandledPDF()){
+						download(nextUnhandledPDF());
+					}
+				}
+			});
+		}
+		pool.shutdown();
+		try {
+			pool.awaitTermination(30, TimeUnit.MINUTES);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public static void download(PDF pdf){
+		if(pdf == null){
+			return;
+		}
+		OutputStream os = null;
+		InputStream is = null;
+		File dir = new File(ROOT_DIR_PATH + "/" +nextWorkDate);
+		if(!dir.exists()){
+			dir.mkdirs();
+		}
+		File file = null;
+		try {
+			URL url = new URL(pdf.getUrl()); 
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setConnectTimeout(10000);;
+			conn.setReadTimeout(60000);
+			file = new File(dir, pdf.getFileName());
+			if(!file.exists()){
+				file.createNewFile();
+			}
+			os = new FileOutputStream(file);
+			is = conn.getInputStream();
+			byte[] bytes = new byte[10240];
+			int len = 0;
+			int sum = 0;
+			while((len = is.read(bytes)) > 0){
+				sum += len;
+				os.write(bytes, 0, len);
+			}
+			if(sum == file.length()){
+				pdf.setDownloaded(true);
+				Log.log("Downloaded: " + (pdfs.indexOf(pdf) + 1) + "\t" + 
+						pdf.getName().substring(0, pdf.getName().indexOf("-", pdf.getName().indexOf("-", pdf.getName().indexOf("-") + 1) + 1)) + "   \t" + 
+						pdf.getTime());
+			}else{
+				pdf.setDistributed(false);
+				pdf.setDownloaded(false);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			pdf.setDistributed(false);
+			pdf.setDownloaded(false);
+			Log.log(e.getMessage());
+			e.printStackTrace();
+		}finally{
+			try {
+				if(os != null){
+					os.close();
+				}
+				if(is != null){
+					is.close();
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				Log.log(e.getMessage());
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public static boolean hasNextUnhandledPDF(){
+		for(PDF pdf:pdfs){
+			if(!pdf.isDownloaded()){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static PDF nextUnhandledPDF(){
+		for(PDF pdf:pdfs){
+			if(!pdf.isDistributed()&&!pdf.isDownloaded()){
+				pdf.setDistributed(true);
+				return pdf;
+			}
+		}
+		return null;
 	}
 	
 	public static void checkDownloadedFile(){
