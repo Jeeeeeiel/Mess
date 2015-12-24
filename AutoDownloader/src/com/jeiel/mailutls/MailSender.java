@@ -59,7 +59,7 @@ public class MailSender {
 		}
 		try {
 			MailSender.nextWordDate = nextWorkDate;
-			send(recipientsList, "AutoDownload¡ª¡ªResult",
+			send(recipientsList, "AutoDownload----Result",
 					 "NextWorkDate: " + nextWorkDate + ". Work done!", Log.logFile.getAbsolutePath());
 			return true;
 		} catch (AddressException e) {

@@ -10,7 +10,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -36,18 +34,14 @@ import com.jeiel.mailutls.MailSender;
 
 public class AutoDownloaderMultiThread {
 	
-	public static final String URL = "http://sys.hibor.com.cn/center/maibo/qikanzuixin.asp?page=";
-	public static final String params = "&abc=&def=&vidd=&keyy=&F_F=13&pagenumber=&recordnumbe";
+	public static final String URL = "http://sys.hibor.com.cn//center/maibo/qikanzuixin.asp?page=";
+	public static final String params = "&abc="+Account.getCurrentAccount()+"&def=&F_F=13";//F_F=13ÊòæÁ§∫ÊúÄÊñ∞ËÇ°Á•®
 	public static final String ROOT_DIR_PATH = "d://DailyPDFMultiThread";
 	public static final String TARGET_DIR_PATH = "d://WBWJ_YBDOWNLOAD";
 	public static final int MAX_THREAD_AMOUT = 20;
 	private static String nextWorkDate = null;
 	private static String beginTime = "";
 	private static List<PDF> pdfs = new ArrayList<PDF>();
-	private static boolean getElementsSucceed = false;
-	private static boolean initializationSucceed = false;
-	private static boolean extractPDFURLSucceed = false;
-	private static int extracted = 0;
 	
 
 	static{
@@ -65,16 +59,13 @@ public class AutoDownloaderMultiThread {
 		Log.log("Root Directory: " + ROOT_DIR_PATH);
 		getNextWorkDate();
 		checkFileExist();
-		while(!initializationSucceed){
-			initDownloadList();
-		}
-		Log.log("Extracting PDF URL...");
-		while(!extractPDFURLSucceed){
-			ExtractPDFURL();
-		}
+		initDownloadList();
+		
+			
+		ExtractPDFURL();
 		generateFileName();
 		
-		Log.log("Downloading...");
+		
 		startWork();
 		checkDownloadedFile();
 		record();
@@ -139,13 +130,12 @@ public class AutoDownloaderMultiThread {
 		return false;
 	}
 	
-	public static void initDownloadList(){//√ª”–¿˙ ∑º«¬ºæÕ÷ªœ¬µ±ÃÏpdf£¨”–º«¬ºæÕœ¬º«¬º÷Æ∫Ûµƒpdf
+	public static void initDownloadList(){//
 		pdfs.clear();
 		checkRecords();
 		Elements elements = null;
-		while(!getElementsSucceed){
-			elements = getElements();
-		}
+		elements = getEveryRow();//every row
+		
 		String baseUrl = "http://sys.hibor.com.cn/center/maibo/";
 		for(Element e : elements){
 			Elements tds = e.getElementsByTag("td");
@@ -158,26 +148,22 @@ public class AutoDownloaderMultiThread {
 			pdf.setUrl(baseUrl + tds.get(6).getElementsByTag("a").get(0).attr("href"));
 			pdfs.add(pdf);
 		}
-		initializationSucceed = true;
 		Log.log("File amount: " + pdfs.size());
 	}
 	
-	public static void checkRecords(){//ºÏ≤È…œ¥Œœ¬‘ÿµΩƒƒ¿Ô
+	public static void checkRecords(){//
 		File dir = new File(ROOT_DIR_PATH);
-		if(dir.exists()){//≈–∂œ”–Œﬁ¿˙ ∑º«¬º
+		if(dir.exists()){//
 			if(dir.listFiles() != null && dir.listFiles().length > 0){
 				File file = null;
-				FileInputStream fis = null;
-				HSSFWorkbook book = null;
 				HSSFSheet sheet = null;
 				HSSFRow row = null;
 				File[] files = dir.listFiles();
 				for(int i = files.length - 1; i >= 0 ; i--){
 					file = files[i];
-					if(file.isFile() && file.getName().endsWith(".xls")){
-						try {
-							fis = new FileInputStream(file);
-							book = new HSSFWorkbook(fis);
+					if(file.isFile() && file.getName().matches("^[0-9]{8}\\.xls$")){
+						try(FileInputStream fis = new FileInputStream(file);
+								HSSFWorkbook book = new HSSFWorkbook(fis);) {
 							sheet = book.getSheet("records");
 							if(sheet.getLastRowNum() >= 1){
 								row = sheet.getRow(1);
@@ -192,16 +178,6 @@ public class AutoDownloaderMultiThread {
 							// TODO Auto-generated catch block
 							Log.log(e.getMessage());
 							e.printStackTrace();
-						}finally{
-							try {
-								if(fis != null)fis.close();
-								if(book != null)book.close();
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								Log.log(e.getMessage());
-								e.printStackTrace();
-							}
-							
 						}
 						break;
 					}
@@ -210,52 +186,74 @@ public class AutoDownloaderMultiThread {
 		}
 	}
 	
-	public static Elements getElements(){//ªÒ»°Õ¯“≥…œ—–±®‘™Àÿ
-		String url = null;
-		Elements elements = new Elements();
-		try {
-			if(beginTime == null || beginTime.equals("")){//√ª”–¿˙ ∑º«¬º,œ¬‘ÿµ±ÃÏ
-				SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-				beginTime = format.format(new Date()) + " 00:00:00";
-				Log.log("beginTime: " + beginTime);
-			}
-			boolean completed = false;
-			getElementsSucceed = false;
-			int page = 1;
-			while(!completed){
-				url = URL + page + params;
-				Connection conn = Jsoup.connect(url);
-				Document doc = conn.timeout(8000).get();
-				Elements tmps = doc.getElementsByClass("classbaogao_sousuo_ulresult");
-				for(Element e : tmps){
-					if(completeDate(e.getElementsByTag("td").get(5).text()).compareTo(beginTime) <= 0){
-						completed = true;
-						break;
-					}
-					elements.add(e);
-					/*if(elements.size()>=30){
-						completed=true;
-						break;
-					}*/
+	public static Document getDocument(String url, int timeoutMS){
+		while(true){
+			try{
+				if(Proxy.changeProxy().equals(Proxy.NOPROXYAVALIABLE)){
+					Log.log(Proxy.NOPROXYAVALIABLE);
+					Log.log("Force quit!");
+					System.exit(-1);
 				}
-				page++;
+				if(Account.changeAccount().equals(Account.NOACCOUNTAVALIABLE)){
+					Log.log(Account.NOACCOUNTAVALIABLE);
+					Log.log("Force quit!");
+					System.exit(-1);
+				}
+				
+				Connection conn = Jsoup.connect(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + Account.getCurrentAccount()));
+				Document doc = conn.timeout(timeoutMS > 0 ? timeoutMS : 10000).get();
+				if(doc.text().contains("ÊµèËßà‰∏äÈôê")){
+					Log.log("Account: " + Account.getCurrentAccount() + "\t overused!");
+					if(Account.removeCurrentAccount().equals(Account.NOACCOUNTAVALIABLE)){
+						Log.log(Account.NOACCOUNTAVALIABLE);
+						Log.log("Force quit!");
+						System.exit(-1);
+					}else{
+						continue;
+					}
+				}else if(doc.text().contains("Á¶ÅÊ≠¢ËÆøÈóÆ")){
+					Log.log("Proxy: " + Proxy.getCurrentProxy() + "\t disabled!");
+					if(Proxy.removeCurrentProxy().equals(Proxy.NOPROXYAVALIABLE)){
+						Log.log(Proxy.NOPROXYAVALIABLE);
+						Log.log("Force quit!");
+						System.exit(-1);
+					}
+				}
+				return doc;
+			}catch(Exception e){
+				if(e.getMessage().contains("403")){
+					Proxy.changeProxy();
+				}
+				e.printStackTrace();
 			}
-			getElementsSucceed = true;
-			
-		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
-			Log.log(e.getMessage());
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			Log.log(e.getMessage());
-			e.printStackTrace();
 		}
-		
-		return elements;
 	}
 	
-	public static String completeDate(String formerDate){//≤π∆Î»’∆⁄
+	public static Elements getEveryRow(){//get every row in web
+		String url = null;
+		Elements elements = new Elements();
+
+		if(beginTime == null || beginTime.equals("")){//
+			SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+			beginTime = format.format(new Date()) + " 00:00:00";
+			Log.log("beginTime: " + beginTime);
+		}
+		int page = 1;
+		while(true){
+			url = URL + page + params;
+			Document doc = getDocument(url, 60000);
+			Elements tmps = doc.select("div.classbaogao_sousuo_ulresult tr");
+			for(Element e : tmps){
+				if(completeDate(e.select("td").get(5).text()).compareTo(beginTime) <= 0){
+					return elements;
+				}
+				elements.add(e);
+			}
+			page++;
+		}
+	}
+	
+	public static String completeDate(String formerDate){
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		String latterDate = "";
 		try {
@@ -269,7 +267,7 @@ public class AutoDownloaderMultiThread {
 		return latterDate;
 	}
 	
-	public static void generateFileName(){//∏Ò ΩªØŒƒº˛√˚
+	public static void generateFileName(){
 		Log.log("Generating file name...");
 		for(PDF pdf : pdfs){
 			String date = pdf.getTime().split(" ")[0].replace("-", "");
@@ -278,37 +276,30 @@ public class AutoDownloaderMultiThread {
 					.replace("?", "").replace("|", "").replace("\"", "").replace(":", "");
 			String suffix = pdf.getUrl().substring(pdf.getUrl().lastIndexOf("."));
 			pdf.setFileName(date + "-" + name + suffix);
-			//Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getFileName());
+			Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getFileName());
 		}
 	}
 	
-	public static void ExtractPDFURL(){//≥È»°Õ¯“≥÷–frame÷–µƒ—–±®¡¥Ω”
-		try {
-			for(PDF pdf : pdfs){
-				if(extracted > pdfs.indexOf(pdf)){
-					continue;
+	public static void ExtractPDFURL(){
+		Log.log("Extracting PDF URL...");
+
+		for(PDF pdf : pdfs){
+			Document doc = null;
+			Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
+			while(true){
+				doc = getDocument(pdf.getUrl(), 60000);
+				if(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").size()>0){
+					break;
 				}
-				Connection conn = Jsoup.connect(pdf.getUrl());
-				Document doc = conn.timeout(5000).get();
-				if(!doc.getElementsByTag("iframe").get(0).attr("src").endsWith(".pdf")&&
-						!doc.getElementsByTag("iframe").get(0).attr("src").endsWith(".doc")&&
-						!doc.getElementsByTag("iframe").get(0).attr("src").endsWith(".docx")){
-					return;
-				}
-				pdf.setUrl(doc.getElementsByTag("iframe").get(0).attr("src"));
-				//Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
-				extracted++;
 			}
-			extractPDFURLSucceed = true;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			Log.log(e.getMessage());
-			e.printStackTrace();
+			pdf.setUrl(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").get(0).attr("src"));
+			Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
 		}
 		
 	}
 	
 	public static void startWork(){
+		Log.log("Downloading...");
 		ExecutorService pool = Executors.newCachedThreadPool();
 		for(int i = 0; i < MAX_THREAD_AMOUT; i++){
 			pool.execute(new Runnable() {
@@ -345,6 +336,7 @@ public class AutoDownloaderMultiThread {
 		File file = null;
 		try {
 			URL url = new URL(pdf.getUrl()); 
+			Proxy.changeProxy();
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setConnectTimeout(10000);;
 			conn.setReadTimeout(60000);

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<comment>for test</comment>
+<entry key="proxy">
+120.52.73.33:80;
+120.52.73.36:80;
+117.136.234.6:843;
+117.136.234.11:843;
+120.52.73.34:80;
+120.52.73.14:80;
+120.52.73.2:80;
+120.52.73.31:80;
+121.41.45.172:80;
+111.56.13.151:80;
+120.52.73.7:80;
+</entry>
+<entry key="account">
+oXxXqV9YoXyWoX:szsesxs;
+tYtY9XeZvYxXkYmU:qqbcszhn;
+qVvVgZsW8VkZgVzW:svmvaiiy;
+vUrUkZeV9UtZoUyW:wsigappx;
+rVaUiZaVdUeZiVbW:rbocecka;
+jYqXeWfYnXeWqYpZ:oqdcldvt;
+dWpWwUkXtWbU8W8X:gsxowcbc;
+lYvYwWjZvXmWiYeZ:iszntlnc;
+9ZaZaXfUhYpXqZcU:dgagmrwd;
+hYmXzWjYsXtWnYmZ:mmyowwkk;
+aXhXuWkYiXpWuXNB:ajthisux;
+6YyXIWrYQXOWVY:ZyXwABC;
+8V9ZhYlYmU:admin;
+</entry>
+</properties>
