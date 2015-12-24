@@ -37,8 +37,11 @@ public class AutoDownloaderMultiThread {
 	public static final String URL = "http://sys.hibor.com.cn//center/maibo/qikanzuixin.asp?page=";
 	public static final String params = "&abc="+Account.getCurrentAccount()+"&def=&F_F=13";//F_F=13显示最新股票
 	public static final String ROOT_DIR_PATH = "d://DailyPDFMultiThread";
+	//public static final String ROOT_DIR_PATH = "/Users/Jeiel/Workspaces/GitHub/Mess/AutoDownloader";
 	public static final String TARGET_DIR_PATH = "d://WBWJ_YBDOWNLOAD";
-	public static final int MAX_THREAD_AMOUT = 20;
+	//public static final String TARGET_DIR_PATH = "/Users/Jeiel/Workspaces";
+	private static final int MAX_THREAD_AMOUT = 20;//download thread
+	private static final int MAX_EXTRACT_THREAD_AMOUNT = 20;//extract url thread
 	private static String nextWorkDate = null;
 	private static String beginTime = "";
 	private static List<PDF> pdfs = new ArrayList<PDF>();
@@ -164,7 +167,7 @@ public class AutoDownloaderMultiThread {
 					if(file.isFile() && file.getName().matches("^[0-9]{8}\\.xls$")){
 						try(FileInputStream fis = new FileInputStream(file);
 								HSSFWorkbook book = new HSSFWorkbook(fis);) {
-							sheet = book.getSheet("records");
+							sheet = book.getSheetAt(0);
 							if(sheet.getLastRowNum() >= 1){
 								row = sheet.getRow(1);
 								beginTime = completeDate(row.getCell(1).getStringCellValue());
@@ -241,7 +244,7 @@ public class AutoDownloaderMultiThread {
 		int page = 1;
 		while(true){
 			url = URL + page + params;
-			Document doc = getDocument(url, 60000);
+			Document doc = getDocument(url, 20000);
 			Elements tmps = doc.select("div.classbaogao_sousuo_ulresult tr");
 			for(Element e : tmps){
 				if(completeDate(e.select("td").get(5).text()).compareTo(beginTime) <= 0){
@@ -282,18 +285,42 @@ public class AutoDownloaderMultiThread {
 	
 	public static void ExtractPDFURL(){
 		Log.log("Extracting PDF URL...");
-
-		for(PDF pdf : pdfs){
-			Document doc = null;
-			Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
-			while(true){
-				doc = getDocument(pdf.getUrl(), 60000);
-				if(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").size()>0){
-					break;
+		ExecutorService pool = Executors.newCachedThreadPool();
+		for(int i = 0; i < MAX_EXTRACT_THREAD_AMOUNT; i++){
+			pool.execute(new Runnable() {
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub;
+					Log.log(Thread.currentThread().getName() + " start");
+					while(hasNextUnhandledPDF()){
+						PDF pdf = nextUnhandledPDF();
+						if(pdf == null){
+							break;
+						}
+						Document doc = null;
+						Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
+						while(true){
+							doc = getDocument(pdf.getUrl(), 20000);
+							if(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").size()>0){
+								break;
+							}
+						}
+						pdf.setUrl(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").get(0).attr("src"));
+						Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
+					}
 				}
-			}
-			pdf.setUrl(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").get(0).attr("src"));
-			Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
+			});
+		}
+		pool.shutdown();
+		try {
+			pool.awaitTermination(30, TimeUnit.MINUTES);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		for(PDF pdf : pdfs){
+			pdf.setDistributed(false);
+			pdf.setDownloaded(false);
 		}
 		
 	}
@@ -339,7 +366,7 @@ public class AutoDownloaderMultiThread {
 			Proxy.changeProxy();
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setConnectTimeout(10000);;
-			conn.setReadTimeout(60000);
+			conn.setReadTimeout(40000);
 			file = new File(dir, pdf.getFileName());
 			if(!file.exists()){
 				file.createNewFile();
@@ -442,7 +469,7 @@ public class AutoDownloaderMultiThread {
 		File file = new File(dir, fileName);
 		FileOutputStream fos = null;
 		HSSFWorkbook book = new HSSFWorkbook();
-		HSSFSheet sheet = book.createSheet("records");
+		HSSFSheet sheet = book.createSheet();
 		HSSFRow row = sheet.createRow(0);
 		row.createCell(0).setCellValue("Name");
 		row.createCell(1).setCellValue("Time");

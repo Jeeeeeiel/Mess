@@ -5,8 +5,8 @@ public class PDF {
 	private String time;
 	private String url;
 	private String fileName;
-	private boolean distributed;
-	private boolean downloaded;
+	private boolean distributed = false;
+	private boolean downloaded = false;
 	public String getName() {
 		return name;
 	}
