@@ -1,7 +1,7 @@
-package com.jeiel.tool;
+package com.jeiel.bean;
 
 public class Holiday {
-	public static final String HODILAY[][]=new String[][]{//2016全年法定节假日
+	public static final String HODILAY[][]=new String[][]{//2016全锟疥法锟斤拷锟节硷拷锟斤拷
 		{"20160101", "20160103"},
 		{"20160207", "20160213"},
 		{"20160403", "20160405"},

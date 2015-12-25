@@ -1,4 +1,4 @@
-package com.jeiel.tool;
+package com.jeiel.bean;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -8,32 +8,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import com.jeiel.tool.Log;
+
 public class Proxy {
-	public static String PROPERTIES_PATH = AutoDownloaderMultiThread.ROOT_DIR_PATH + "//InitArgs.xml";
 	private static int currentPorxy = -1;
-	public static final String NOPROXYAVALIABLE = "No proxy avaliable!" ;
-	
+	public static final String NOPROXYAVALIABLE = "No proxies avaliable!" ;
+	public static final String PROXYAVALIABLE = "Proxies avaliable!" ;
 	private static List<String> proxyList = new ArrayList<String>();
 	
 	static{
-		Log.log("Initializing proxy...");
+		Log.log("Initializing proxies...");
 		Properties props = new Properties();
 		try {
-			props.loadFromXML(new FileInputStream(new File(PROPERTIES_PATH)));
+			Log.log("Adding proxies...");
+			props.loadFromXML(new FileInputStream(new File(Config.EXTERNAL_ARGS_PATH)));
 			if(props.containsKey("proxy")){
 				for(String p : props.getProperty("proxy").split(";")){
 					if(p.trim().length()>0){
-						Log.log("Adding proxy: " + p.trim());
 						proxyList.add(p.trim());
 					}
 				}
 			}
-			System.out.println("Proxy amount: " + proxyList.size());
-			if(Proxy.changeProxy().equals(Proxy.NOPROXYAVALIABLE)){
-				Log.log(Proxy.NOPROXYAVALIABLE);
-				Log.log("Force quit!");
-				System.exit(-1);
-			}
+			Log.log("Proxies amount: " + proxyList.size());
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -53,25 +49,25 @@ public class Proxy {
 			return NOPROXYAVALIABLE;
 		}
 		currentPorxy = (currentPorxy + 1) % proxyList.size();
-		Log.log("Use proxy" + currentPorxy + ": " + getCurrentProxy());
+		Log.log("Switch proxy: " + getCurrentProxy());
 		System.setProperty("http.proxyHost", getCurrentProxy().split(":")[0]);
 		System.setProperty("http.proxyPort", getCurrentProxy().split(":")[1]);
 		return getCurrentProxy();
 	}
 	
-	public static synchronized String getCurrentProxy(){
-		if(currentPorxy < 0){
-			return "Please invoke changePorxy() first!";
-		}
+	private static String getCurrentProxy(){
 		return proxyList.get(currentPorxy);
 	}
 	
-	public static synchronized String removeCurrentProxy(){
-		if(currentPorxy >= 0 && currentPorxy < proxyList.size()){
-			proxyList.remove(currentPorxy);
-			return changeProxy();
+	public static synchronized String removeCurrentProxy(String proxy){
+		proxyList.remove(proxy);
+		Log.log("Remove proxy: " + proxy + ". " + proxyList.size() + " proxies left.");
+		currentPorxy = currentPorxy % proxyList.size();
+		if(proxyList.size()==0){
+			return NOPROXYAVALIABLE;
+		}else{
+			return PROXYAVALIABLE;
 		}
-		return "ERROR";
 	}
 
 }

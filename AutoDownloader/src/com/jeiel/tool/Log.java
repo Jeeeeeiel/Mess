@@ -4,13 +4,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import com.jeiel.bean.Config;
+
 
 public class Log{
 	public static File logFile = null;
 	public static FileOutputStream fos = null;
 	
 	static{
-		logFile = new File(AutoDownloaderMultiThread.ROOT_DIR_PATH + "/tmp.log");
+		logFile = new File(Config.ROOT_DIR_PATH + "/tmp.log");
 		if(logFile.exists()){
 			logFile.delete();
 		}
@@ -32,6 +34,17 @@ public class Log{
 			e.printStackTrace();
 		}
 		System.out.println(msg);
+	}
+	
+	public static void logInCurrentLine(String msg){
+		try {
+			fos.write((msg).getBytes());
+			fos.flush();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.print(msg);
 	}
 	
 	public static void copyTo(String dir, String newName){

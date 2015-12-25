@@ -1,4 +1,4 @@
-package com.jeiel.tool;
+package com.jeiel.bean;
 
 public class PDF {
 	private String name;

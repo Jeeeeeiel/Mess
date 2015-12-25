@@ -27,6 +27,9 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import com.jeiel.bean.Holiday;
+import com.jeiel.bean.PDF;
+
 
 public class AutoDownloader {
 	
@@ -155,7 +158,7 @@ public class AutoDownloader {
 		return false;
 	}
 	
-	public static void initDownloadList(){//Ã»ÓÐÀúÊ·¼ÇÂ¼¾ÍÖ»ÏÂµ±Ììpdf£¬ÓÐ¼ÇÂ¼¾ÍÏÂ¼ÇÂ¼Ö®ºóµÄpdf
+	public static void initDownloadList(){//Ã»ï¿½ï¿½ï¿½ï¿½Ê·ï¿½ï¿½Â¼ï¿½ï¿½Ö»ï¿½Âµï¿½ï¿½ï¿½pdfï¿½ï¿½ï¿½Ð¼ï¿½Â¼ï¿½ï¿½ï¿½Â¼ï¿½Â¼Ö®ï¿½ï¿½ï¿½pdf
 		pdfs.clear();
 		checkRecords();
 		Elements elements = null;
@@ -178,9 +181,9 @@ public class AutoDownloader {
 		Log.log("File amount: " + pdfs.size());
 	}
 	
-	public static void checkRecords(){//¼ì²éÉÏ´ÎÏÂÔØµ½ÄÄÀï
+	public static void checkRecords(){//ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		File dir = new File(ROOT_DIR_PATH);
-		if(dir.exists()){//ÅÐ¶ÏÓÐÎÞÀúÊ·¼ÇÂ¼
+		if(dir.exists()){//ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·ï¿½ï¿½Â¼
 			if(dir.listFiles() != null && dir.listFiles().length > 0){
 				File file = null;
 				FileInputStream fis = null;
@@ -226,11 +229,11 @@ public class AutoDownloader {
 		}
 	}
 	
-	public static Elements getElements(){//»ñÈ¡ÍøÒ³ÉÏÑÐ±¨ÔªËØ
+	public static Elements getElements(){//ï¿½ï¿½È¡ï¿½ï¿½Ò³ï¿½ï¿½ï¿½Ð±ï¿½Ôªï¿½ï¿½
 		String url = null;
 		Elements elements = new Elements();
 		try {
-			if(beginTime == null || beginTime.equals("")){//Ã»ÓÐÀúÊ·¼ÇÂ¼,ÏÂÔØµ±Ìì
+			if(beginTime == null || beginTime.equals("")){//Ã»ï¿½ï¿½ï¿½ï¿½Ê·ï¿½ï¿½Â¼,ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½
 				SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 				beginTime = format.format(new Date()) + " 00:00:00";
 			}
@@ -270,7 +273,7 @@ public class AutoDownloader {
 		return elements;
 	}
 	
-	public static String completeDate(String formerDate){//²¹ÆëÈÕÆÚ
+	public static String completeDate(String formerDate){//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		String latterDate = "";
 		try {
@@ -284,7 +287,7 @@ public class AutoDownloader {
 		return latterDate;
 	}
 	
-	public static void generateFileName(){//¸ñÊ½»¯ÎÄ¼þÃû
+	public static void generateFileName(){//ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
 		Log.log("Generating file name...");
 		for(PDF pdf : pdfs){
 			String date = pdf.getTime().split(" ")[0].replace("-", "");
@@ -350,7 +353,7 @@ public class AutoDownloader {
 		}
 	}
 	
-	public static void ExtractPDFURL(){//³éÈ¡ÍøÒ³ÖÐframeÖÐµÄÑÐ±¨Á´½Ó
+	public static void ExtractPDFURL(){//ï¿½ï¿½È¡ï¿½ï¿½Ò³ï¿½ï¿½frameï¿½Ðµï¿½ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½
 		try {
 			for(PDF pdf : pdfs){
 				if(extracted > pdfs.indexOf(pdf)){

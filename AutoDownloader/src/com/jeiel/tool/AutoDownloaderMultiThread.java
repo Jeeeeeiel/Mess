@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -17,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -28,27 +28,61 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-
+import com.jeiel.bean.Account;
+import com.jeiel.bean.Config;
+import com.jeiel.bean.Holiday;
+import com.jeiel.bean.PDF;
+import com.jeiel.bean.Proxy;
 import com.jeiel.mailutls.MailSender;
 
 
 public class AutoDownloaderMultiThread {
 	
-	public static final String URL = "http://sys.hibor.com.cn//center/maibo/qikanzuixin.asp?page=";
-	public static final String params = "&abc="+Account.getCurrentAccount()+"&def=&F_F=13";//F_F=13显示最新股票
-	public static final String ROOT_DIR_PATH = "d://DailyPDFMultiThread";
-	//public static final String ROOT_DIR_PATH = "/Users/Jeiel/Workspaces/GitHub/Mess/AutoDownloader";
-	public static final String TARGET_DIR_PATH = "d://WBWJ_YBDOWNLOAD";
-	//public static final String TARGET_DIR_PATH = "/Users/Jeiel/Workspaces";
-	private static final int MAX_THREAD_AMOUT = 20;//download thread
-	private static final int MAX_EXTRACT_THREAD_AMOUNT = 20;//extract url thread
+	private static final String URL = "http://sys.hibor.com.cn//center/maibo/qikanzuixin.asp?page=";
+	private static final String params = "&abc=tmp&def=&F_F=13";//F_F=13显示最新股票
+	private static final int MAX_DOWNLOAD_THREAD_AMOUMT;//download thread
+	private static final int MAX_EXTRACT_THREAD_AMOUNT;//extract url thread
+	private static final int MAX_DEFAULT_THREAD_AMOUNT = 40;//default thread size
 	private static String nextWorkDate = null;
 	private static String beginTime = "";
 	private static List<PDF> pdfs = new ArrayList<PDF>();
 	
+	static{//Initionalize thread amount
+		Properties props = new Properties();
+		try {
+			props.load(new FileInputStream(new File(Config.PROPERTIES_PATH)));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if(props != null && props.containsKey("MAX_DOWNLOAD_THREAD_AMOUNT")){
+			String tmp = props.getProperty("MAX_DOWNLOAD_THREAD_AMOUNT").trim();
+			if(tmp.matches("^[1-9]{1}[0-9]{0,1}$")){
+				MAX_DOWNLOAD_THREAD_AMOUMT = Integer.parseInt(tmp);
+			}else{
+				MAX_DOWNLOAD_THREAD_AMOUMT = MAX_DEFAULT_THREAD_AMOUNT;
+			}
+		}else{
+			MAX_DOWNLOAD_THREAD_AMOUMT = MAX_DEFAULT_THREAD_AMOUNT;
+		}
+		if(props != null && props.containsKey("MAX_EXTRACT_THREAD_AMOUNT")){
+			String tmp = props.getProperty("MAX_DOWNLOAD_THREAD_AMOUNT").trim();
+			if(tmp.matches("^[1-9]{1}[0-9]{0,1}$")){
+				MAX_EXTRACT_THREAD_AMOUNT = Integer.parseInt(tmp);
+			}else{
+				MAX_EXTRACT_THREAD_AMOUNT = MAX_DEFAULT_THREAD_AMOUNT;
+			}
+		}else{
+			MAX_EXTRACT_THREAD_AMOUNT = MAX_DEFAULT_THREAD_AMOUNT;
+		}
+			
+	}
 
 	static{
-		File rootDir = new File(ROOT_DIR_PATH);
+		File rootDir = new File(Config.ROOT_DIR_PATH);
 		if(!rootDir.exists()){
 			rootDir.mkdirs();
 		}
@@ -59,7 +93,7 @@ public class AutoDownloaderMultiThread {
 		if(!isWorkDate()) return;
 		Log.log("Start");
 		Log.log("Initializing...");
-		Log.log("Root Directory: " + ROOT_DIR_PATH);
+		Log.log("Root Directory: " + Config.ROOT_DIR_PATH);
 		getNextWorkDate();
 		checkFileExist();
 		initDownloadList();
@@ -71,17 +105,17 @@ public class AutoDownloaderMultiThread {
 		
 		startWork();
 		checkDownloadedFile();
-		record();
+		exportToExcel();
 		copyReportsToTargetDir();
-		Log.log("Done");
+		Log.log("Done");/*
 		if(MailSender.remind(nextWorkDate)){
 			Log.log("Succeed!");
 		}else{
 			Log.log("Failed!");
-		}
+		}*/
 		
 		Log.closeLogFile();
-		Log.copyTo(ROOT_DIR_PATH, nextWorkDate + ".log");
+		Log.copyTo(Config.ROOT_DIR_PATH, nextWorkDate + ".log");
 	}
 	
 	public static boolean isWorkDate(){
@@ -104,7 +138,7 @@ public class AutoDownloaderMultiThread {
 	}
 	
 	public static void checkFileExist(){
-		File file = new File(ROOT_DIR_PATH + "/" + nextWorkDate);
+		File file = new File(Config.ROOT_DIR_PATH + "/" + nextWorkDate);
 		if(file.exists()){
 			if(file.listFiles() != null){
 				for(File f:file.listFiles()){
@@ -113,7 +147,7 @@ public class AutoDownloaderMultiThread {
 			}
 			file.delete();
 		}
-		file = new File(ROOT_DIR_PATH + "/" + nextWorkDate + ".xls");
+		file = new File(Config.ROOT_DIR_PATH + "/" + nextWorkDate + ".xls");
 		if(file.exists()){
 			file.delete();
 		}
@@ -155,7 +189,7 @@ public class AutoDownloaderMultiThread {
 	}
 	
 	public static void checkRecords(){//
-		File dir = new File(ROOT_DIR_PATH);
+		File dir = new File(Config.ROOT_DIR_PATH);
 		if(dir.exists()){//
 			if(dir.listFiles() != null && dir.listFiles().length > 0){
 				File file = null;
@@ -192,41 +226,34 @@ public class AutoDownloaderMultiThread {
 	public static Document getDocument(String url, int timeoutMS){
 		while(true){
 			try{
-				if(Proxy.changeProxy().equals(Proxy.NOPROXYAVALIABLE)){
-					Log.log(Proxy.NOPROXYAVALIABLE);
-					Log.log("Force quit!");
-					System.exit(-1);
+				String proxy = Proxy.changeProxy();
+				String account = Account.changeAccount();
+				if(proxy.equals(Proxy.NOPROXYAVALIABLE)){
+					forceQuit(Proxy.NOPROXYAVALIABLE);
 				}
-				if(Account.changeAccount().equals(Account.NOACCOUNTAVALIABLE)){
-					Log.log(Account.NOACCOUNTAVALIABLE);
-					Log.log("Force quit!");
-					System.exit(-1);
+				if(account.equals(Account.NOACCOUNTAVALIABLE)){
+					forceQuit(Account.NOACCOUNTAVALIABLE);
 				}
 				
-				Connection conn = Jsoup.connect(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + Account.getCurrentAccount()));
+				Connection conn = Jsoup.connect(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + account));
 				Document doc = conn.timeout(timeoutMS > 0 ? timeoutMS : 10000).get();
 				if(doc.text().contains("浏览上限")){
-					Log.log("Account: " + Account.getCurrentAccount() + "\t overused!");
-					if(Account.removeCurrentAccount().equals(Account.NOACCOUNTAVALIABLE)){
-						Log.log(Account.NOACCOUNTAVALIABLE);
-						Log.log("Force quit!");
-						System.exit(-1);
+					Log.log("Account: " + account + "\t overused!");
+					if(Account.removeCurrentAccount(account).equals(Account.NOACCOUNTAVALIABLE)){
+						forceQuit(Account.NOACCOUNTAVALIABLE);
 					}else{
 						continue;
 					}
 				}else if(doc.text().contains("禁止访问")){
-					Log.log("Proxy: " + Proxy.getCurrentProxy() + "\t disabled!");
-					if(Proxy.removeCurrentProxy().equals(Proxy.NOPROXYAVALIABLE)){
-						Log.log(Proxy.NOPROXYAVALIABLE);
-						Log.log("Force quit!");
-						System.exit(-1);
+					Log.log("Proxy: " + proxy + "\t disabled!");
+					if(Proxy.removeCurrentProxy(proxy).equals(Proxy.NOPROXYAVALIABLE)){
+						forceQuit(Proxy.NOPROXYAVALIABLE);
+					}else{
+						continue;
 					}
 				}
 				return doc;
 			}catch(Exception e){
-				if(e.getMessage().contains("403")){
-					Proxy.changeProxy();
-				}
 				e.printStackTrace();
 			}
 		}
@@ -286,7 +313,7 @@ public class AutoDownloaderMultiThread {
 	public static void ExtractPDFURL(){
 		Log.log("Extracting PDF URL...");
 		ExecutorService pool = Executors.newCachedThreadPool();
-		for(int i = 0; i < MAX_EXTRACT_THREAD_AMOUNT; i++){
+		for(int i = 0; i < (MAX_EXTRACT_THREAD_AMOUNT <= pdfs.size() ? MAX_EXTRACT_THREAD_AMOUNT : pdfs.size()); i++){
 			pool.execute(new Runnable() {
 				@Override
 				public void run() {
@@ -298,7 +325,7 @@ public class AutoDownloaderMultiThread {
 							break;
 						}
 						Document doc = null;
-						Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
+						//Log.log((pdfs.indexOf(pdf) + 1) + " " + pdf.getName() + " " + pdf.getUrl());
 						while(true){
 							doc = getDocument(pdf.getUrl(), 20000);
 							if(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").size()>0){
@@ -328,7 +355,7 @@ public class AutoDownloaderMultiThread {
 	public static void startWork(){
 		Log.log("Downloading...");
 		ExecutorService pool = Executors.newCachedThreadPool();
-		for(int i = 0; i < MAX_THREAD_AMOUT; i++){
+		for(int i = 0; i < (MAX_DOWNLOAD_THREAD_AMOUMT <= pdfs.size() ? MAX_DOWNLOAD_THREAD_AMOUMT : pdfs.size()); i++){
 			pool.execute(new Runnable() {
 				
 				@Override
@@ -356,17 +383,18 @@ public class AutoDownloaderMultiThread {
 		}
 		OutputStream os = null;
 		InputStream is = null;
-		File dir = new File(ROOT_DIR_PATH + "/" +nextWorkDate);
+		File dir = new File(Config.ROOT_DIR_PATH + "/" +nextWorkDate);
 		if(!dir.exists()){
 			dir.mkdirs();
 		}
 		File file = null;
+		String proxy = Proxy.changeProxy();
 		try {
 			URL url = new URL(pdf.getUrl()); 
-			Proxy.changeProxy();
+			
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setConnectTimeout(10000);;
-			conn.setReadTimeout(40000);
+			conn.setConnectTimeout(10000);
+			conn.setReadTimeout(20000);
 			file = new File(dir, pdf.getFileName());
 			if(!file.exists()){
 				file.createNewFile();
@@ -375,9 +403,8 @@ public class AutoDownloaderMultiThread {
 			is = conn.getInputStream();
 			byte[] bytes = new byte[10240];
 			int len = 0;
-			int sum = 0;
+			long sum = conn.getContentLengthLong();
 			while((len = is.read(bytes)) > 0){
-				sum += len;
 				os.write(bytes, 0, len);
 			}
 			if(sum == file.length()){
@@ -386,6 +413,7 @@ public class AutoDownloaderMultiThread {
 						pdf.getName().substring(0, pdf.getName().indexOf("-", pdf.getName().indexOf("-", pdf.getName().indexOf("-") + 1) + 1)) + "   \t" + 
 						pdf.getTime());
 			}else{
+				Log.log("File damaged: " + pdf.getFileName() + ". Redownload later.");
 				pdf.setDistributed(false);
 				pdf.setDownloaded(false);
 			}
@@ -394,6 +422,12 @@ public class AutoDownloaderMultiThread {
 			pdf.setDistributed(false);
 			pdf.setDownloaded(false);
 			Log.log(e.getMessage());
+			if(e.getMessage().contains("code: 403")){
+				Log.log("Proxy: " + proxy + "\t disabled!");
+				if(Proxy.removeCurrentProxy(proxy).equals(Proxy.NOPROXYAVALIABLE)){
+					forceQuit(Proxy.NOPROXYAVALIABLE);
+				}
+			}
 			e.printStackTrace();
 		}finally{
 			try {
@@ -432,7 +466,7 @@ public class AutoDownloaderMultiThread {
 	
 	public static void checkDownloadedFile(){
 		Log.log("Checking downloaded files");
-		File dir = new File(ROOT_DIR_PATH + "/" +nextWorkDate);
+		File dir = new File(Config.ROOT_DIR_PATH + "/" +nextWorkDate);
 		int missed = 0;
 		for(PDF pdf : pdfs){
 			File file = new File(dir, pdf.getFileName());
@@ -458,9 +492,9 @@ public class AutoDownloaderMultiThread {
 		Log.log("Repeated Files count: " + repeated);
 	}
 	
-	public static void record(){//record last pdf info,data format: time:name:url
-		Log.log("Recording...");
-		File dir = new File(ROOT_DIR_PATH);
+	public static void exportToExcel(){//record last pdf info,data format: time:name:url
+		Log.log("Exporting to excel...");
+		File dir = new File(Config.ROOT_DIR_PATH);
 		if(!dir.exists()){
 			dir.mkdirs();
 		}
@@ -511,8 +545,8 @@ public class AutoDownloaderMultiThread {
 	}
 
 	public static void copyReportsToTargetDir(){
-		Log.log("Copying to target directory: " + TARGET_DIR_PATH + "/" +nextWorkDate);
-		File targetDir = new File(TARGET_DIR_PATH + "/" + nextWorkDate);
+		Log.log("Copying to target directory: " + Config.TARGET_DIR_PATH + "/" +nextWorkDate);
+		File targetDir = new File(Config.TARGET_DIR_PATH + "/" + nextWorkDate);
 		if(!targetDir.exists()){
 			targetDir.mkdirs();
 		}else{
@@ -522,7 +556,7 @@ public class AutoDownloaderMultiThread {
 				return;
 			}
 		}
-		File originalDir = new File(ROOT_DIR_PATH + "/" + nextWorkDate);
+		File originalDir = new File(Config.ROOT_DIR_PATH + "/" + nextWorkDate);
 		if(!originalDir.exists() || originalDir.listFiles() == null){
 			return;
 		}
@@ -558,4 +592,21 @@ public class AutoDownloaderMultiThread {
 			}
 		}
 	}
+
+	public static void forceQuit(String msg){
+		Log.log(msg);
+		Log.log("Force quitting...");
+		exportToExcel();
+		Log.log("Done");
+		if(MailSender.remind(nextWorkDate)){
+			Log.log("Succeed!");
+		}else{
+			Log.log("Failed!");
+		}
+		
+		Log.closeLogFile();
+		Log.copyTo(Config.ROOT_DIR_PATH, nextWorkDate + ".log");
+		System.exit(-1);
+	}
+
 }

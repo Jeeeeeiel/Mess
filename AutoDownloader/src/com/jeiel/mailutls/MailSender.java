@@ -21,12 +21,10 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeMessage.RecipientType;
-
-import com.jeiel.tool.AutoDownloaderMultiThread;
+import com.jeiel.bean.Config;
 import com.jeiel.tool.Log;
 
 public class MailSender {
-	public static String PROPERTIES_PATH = AutoDownloaderMultiThread.ROOT_DIR_PATH + "//mail.properties";
 	
 	private static final Properties props = System.getProperties();
 	
@@ -75,14 +73,14 @@ public class MailSender {
 
 	private static boolean init(){
 		Log.log("Initting MailSender...");
-		File file = new File(PROPERTIES_PATH);
+		File file = new File(Config.PROPERTIES_PATH);
 		if(!file.exists()){
 			Log.log("mail.properties not exists!");
 			return false;
 		}
 		try {
 			customeProps = new Properties();
-			customeProps.load(new FileInputStream(PROPERTIES_PATH));
+			customeProps.load(new FileInputStream(Config.PROPERTIES_PATH));
 			
 			Log.log("Loading properties...");
 			customeProps.list(new PrintStream(Log.fos));
