@@ -107,12 +107,12 @@ public class AutoDownloaderMultiThread {
 		checkDownloadedFile();
 		exportToExcel();
 		copyReportsToTargetDir();
-		Log.log("Done");/*
+		Log.log("Done");
 		if(MailSender.remind(nextWorkDate)){
 			Log.log("Succeed!");
 		}else{
 			Log.log("Failed!");
-		}*/
+		}
 		
 		Log.closeLogFile();
 		Log.copyTo(Config.ROOT_DIR_PATH, nextWorkDate + ".log");
