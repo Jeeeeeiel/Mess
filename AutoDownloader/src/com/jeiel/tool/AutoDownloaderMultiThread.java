@@ -228,7 +228,7 @@ public class AutoDownloaderMultiThread {
 		}
 	}
 	
-	public static Document getDocument(String url, int timeoutMS){//add "synchronized" tomake sure use different proxy and account every time
+	public static Document getDocument(String url, int timeoutMS){//add local proxy settings to make sure use different proxy and account every time
 		while(true){
 			try{
 				String proxy = Proxy.changeProxy();
