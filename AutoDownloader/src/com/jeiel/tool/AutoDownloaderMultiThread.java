@@ -9,7 +9,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -20,6 +23,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -28,6 +32,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
 import com.jeiel.bean.Account;
 import com.jeiel.bean.Config;
 import com.jeiel.bean.Holiday;
@@ -223,7 +228,7 @@ public class AutoDownloaderMultiThread {
 		}
 	}
 	
-	public static Document getDocument(String url, int timeoutMS){
+	public static Document getDocument(String url, int timeoutMS){//add "synchronized" tomake sure use different proxy and account every time
 		while(true){
 			try{
 				String proxy = Proxy.changeProxy();
@@ -235,8 +240,16 @@ public class AutoDownloaderMultiThread {
 					forceQuit(Account.NOACCOUNTAVALIABLE);
 				}
 				
-				Connection conn = Jsoup.connect(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + account));
-				Document doc = conn.timeout(timeoutMS > 0 ? timeoutMS : 10000).get();
+				/*Connection conn = Jsoup.connect(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + account));
+				Document doc = conn.timeout(timeoutMS > 0 ? timeoutMS : 10000).get();*/
+				
+				SocketAddress addr = new InetSocketAddress(proxy.split(":")[0], Integer.parseInt(proxy.split(":")[1]));
+				java.net.Proxy tp = new java.net.Proxy(java.net.Proxy.Type.HTTP, addr);
+				URLConnection conn = new URL(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + account)).openConnection(tp);
+				conn.setConnectTimeout(timeoutMS > 0 ? timeoutMS : 10000);
+				conn.setReadTimeout(timeoutMS > 0 ? timeoutMS : 10000);
+				Document doc = Jsoup.parse(conn.getInputStream(), "GBK", url);
+				
 				if(doc.text().contains("浏览上限")){
 					Log.log("Account: " + account + "\t overused!");
 					if(Account.removeCurrentAccount(account).equals(Account.NOACCOUNTAVALIABLE)){
@@ -390,11 +403,14 @@ public class AutoDownloaderMultiThread {
 		File file = null;
 		String proxy = Proxy.changeProxy();
 		try {
+			SocketAddress addr = new InetSocketAddress(proxy.split(":")[0], Integer.parseInt(proxy.split(":")[1]));
+			java.net.Proxy tp = new java.net.Proxy(java.net.Proxy.Type.HTTP, addr);
+			
 			URL url = new URL(pdf.getUrl()); 
 			
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection(tp);
 			conn.setConnectTimeout(10000);
-			conn.setReadTimeout(20000);
+			conn.setReadTimeout(10000);
 			file = new File(dir, pdf.getFileName());
 			if(!file.exists()){
 				file.createNewFile();
@@ -454,7 +470,7 @@ public class AutoDownloaderMultiThread {
 		return false;
 	}
 	
-	public static PDF nextUnhandledPDF(){
+	public static synchronized PDF nextUnhandledPDF(){//add "synchronized" to avoid repeated download
 		for(PDF pdf:pdfs){
 			if(!pdf.isDistributed()&&!pdf.isDownloaded()){
 				pdf.setDistributed(true);

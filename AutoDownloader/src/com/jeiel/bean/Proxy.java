@@ -49,7 +49,8 @@ public class Proxy {
 			return NOPROXYAVALIABLE;
 		}
 		currentPorxy = (currentPorxy + 1) % proxyList.size();
-		Log.log("Switch proxy: " + getCurrentProxy());
+		//Log.log("Switch proxy: " + getCurrentProxy());
+		//Global proxy.It doesn't work if you set proxy locally.
 		System.setProperty("http.proxyHost", getCurrentProxy().split(":")[0]);
 		System.setProperty("http.proxyPort", getCurrentProxy().split(":")[1]);
 		return getCurrentProxy();

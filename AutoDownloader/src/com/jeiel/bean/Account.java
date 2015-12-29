@@ -52,7 +52,7 @@ public class Account {
 			return NOACCOUNTAVALIABLE;
 		}
 		currentAccount = (currentAccount + 1) % accountList.size();
-		Log.log("Switch account: " + getCurrentAccount());
+		//Log.log("Switch account: " + getCurrentAccount());
 		return getCurrentAccount();
 	}
 	
