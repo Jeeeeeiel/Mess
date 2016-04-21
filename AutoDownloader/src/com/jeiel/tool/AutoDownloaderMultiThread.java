@@ -625,7 +625,7 @@ public class AutoDownloaderMultiThread {
 		}
 	}
 
-	public static void forceQuit(String msg){
+	public static synchronized void forceQuit(String msg){
 		Log.log(msg);
 		Log.log("Force quitting...");
 		exportToExcel();
