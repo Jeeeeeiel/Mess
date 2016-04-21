@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -43,8 +42,10 @@ import com.jeiel.mailutls.MailSender;
 
 public class AutoDownloaderMultiThread {
 	
-	private static final String URL = "http://sys.hibor.com.cn//center/maibo/qikanzuixin.asp?page=";
-	private static final String params = "&abc=tmp&def=&F_F=13";//F_F=13显示最新股票
+	//private static final String URL = "http://sys.hibor.com.cn//center/maibo/qikanzuixin.asp?";
+	//private static final String params = "&abc=tmp&def=&F_F=13";//F_F=13显示最新股票
+	private static String URL = "http://sys.hibor.com.cn//gongsipingji/index/PingJiYanJiu.aspx";
+	private static String params = "pagenum={page}&pagego={page}&lbc=最新&abc={account}&def=&vidd=5&xyz=oRwPvMsRrQoR&keyy=TYUGUIYUI&value=one";
 	private static final int MAX_DOWNLOAD_THREAD_AMOUMT;//download thread
 	private static final int MAX_EXTRACT_THREAD_AMOUNT;//extract url thread
 	private static final int MAX_DEFAULT_THREAD_AMOUNT = 40;//default thread size
@@ -83,7 +84,14 @@ public class AutoDownloaderMultiThread {
 		}else{
 			MAX_EXTRACT_THREAD_AMOUNT = MAX_DEFAULT_THREAD_AMOUNT;
 		}
+		if(props != null && props.containsKey("URL") && props.containsKey("params")){
+			String tmp = props.getProperty("URL");
+			URL = tmp.matches("^http[s]{0,1}://[\\S]+$")?tmp:URL;
+			tmp = props.getProperty("params");
+			params = tmp.matches("^[\\S]+\\{page\\}[\\S]+\\{account\\}[\\S]+$")?tmp:params;
 			
+		}
+		
 	}
 
 	static{
@@ -99,6 +107,11 @@ public class AutoDownloaderMultiThread {
 		Log.log("Start");
 		Log.log("Initializing...");
 		Log.log("Root Directory: " + Config.ROOT_DIR_PATH);
+		Log.log("URL: "+URL);
+		Log.log("params: "+params);
+		Proxy.changeProxy();
+		Account.changeAccount();
+		
 		getNextWorkDate();
 		checkFileExist();
 		initDownloadList();
@@ -178,16 +191,15 @@ public class AutoDownloaderMultiThread {
 		Elements elements = null;
 		elements = getEveryRow();//every row
 		
-		String baseUrl = "http://sys.hibor.com.cn/center/maibo/";
 		for(Element e : elements){
 			Elements tds = e.getElementsByTag("td");
-			if(tds.get(1).getElementsByTag("a").get(0).attr("title").split("-")[2].startsWith("600")){
+			if(tds.get(1).attr("title").split("-")[2].startsWith("6")){
 				continue;
 			}
 			PDF pdf = new PDF();
-			pdf.setName(tds.get(1).getElementsByTag("a").get(0).attr("title"));
+			pdf.setName(tds.get(1).attr("title"));
 			pdf.setTime(completeDate(tds.get(5).text()));
-			pdf.setUrl(baseUrl + tds.get(6).getElementsByTag("a").get(0).attr("href"));
+			pdf.setUrl(tds.get(6).getElementsByTag("a").get(0).attr("abs:href"));
 			pdfs.add(pdf);
 		}
 		Log.log("File amount: " + pdfs.size());
@@ -245,10 +257,12 @@ public class AutoDownloaderMultiThread {
 				
 				SocketAddress addr = new InetSocketAddress(proxy.split(":")[0], Integer.parseInt(proxy.split(":")[1]));
 				java.net.Proxy tp = new java.net.Proxy(java.net.Proxy.Type.HTTP, addr);
-				URLConnection conn = new URL(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + account)).openConnection(tp);
+				URLConnection conn = new URL(url.replace("{account}", account)).openConnection(tp);
 				conn.setConnectTimeout(timeoutMS > 0 ? timeoutMS : 10000);
 				conn.setReadTimeout(timeoutMS > 0 ? timeoutMS : 10000);
-				Document doc = Jsoup.parse(conn.getInputStream(), "GBK", url);
+				Document doc = Jsoup.parse(conn.getInputStream(), "utf-8", url);
+				
+				//System.out.println(conn.getURL().toString());
 				
 				if(doc.text().contains("浏览上限")){
 					Log.log("Account: " + account + "\t overused!");
@@ -283,14 +297,16 @@ public class AutoDownloaderMultiThread {
 		}
 		int page = 1;
 		while(true){
-			url = URL + page + params;
+			url = URL + "?" + params.replace("{page}", page+"");
+			Log.log(url);
 			Document doc = getDocument(url, 20000);
-			Elements tmps = doc.select("div.classbaogao_sousuo_ulresult tr");
+			Elements tmps = doc.select("#content tr.li_bg");
 			for(Element e : tmps){
 				if(completeDate(e.select("td").get(5).text()).compareTo(beginTime) <= 0){
 					return elements;
 				}
 				elements.add(e);
+				
 			}
 			page++;
 		}

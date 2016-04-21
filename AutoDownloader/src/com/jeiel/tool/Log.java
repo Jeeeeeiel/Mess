@@ -27,7 +27,7 @@ public class Log{
 	
 	public static void log(String msg){
 		try {
-			fos.write((msg+"\r\n").getBytes());
+			fos.write((msg+"\r\n").getBytes("utf-8"));
 			fos.flush();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -38,7 +38,7 @@ public class Log{
 	
 	public static void logInCurrentLine(String msg){
 		try {
-			fos.write((msg).getBytes());
+			fos.write((msg).getBytes("utf-8"));
 			fos.flush();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

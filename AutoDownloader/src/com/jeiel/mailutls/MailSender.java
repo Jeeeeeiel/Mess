@@ -21,7 +21,9 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeMessage.RecipientType;
+
 import com.jeiel.bean.Config;
+import com.jeiel.bean.Proxy;
 import com.jeiel.tool.Log;
 
 public class MailSender {
@@ -41,6 +43,7 @@ public class MailSender {
 	}
 	
 	public static boolean remind(String nextWorkDate){
+		Proxy.clear();
 		if(!init()){
 			Log.log("Init failed!");
 			return false;

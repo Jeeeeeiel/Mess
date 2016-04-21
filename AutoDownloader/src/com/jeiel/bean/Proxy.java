@@ -71,4 +71,8 @@ public class Proxy {
 		}
 	}
 
+	public static void clear(){
+		System.setProperty("http.proxyHost", "");
+		System.setProperty("http.proxyPort", "");
+	}
 }
