@@ -419,7 +419,7 @@ public class AutoDownloaderMultiThread {
 		if(pdf == null){
 			return;
 		}
-		if(pdf.getUrl().startsWith("http://pdf.hibor.com.cn/UpFile/")){
+		if(!pdf.getUrl().startsWith("http://pdf.hibor.com.cn/UpFile/")){
 			pdf.setDownloaded(true);
 			return;
 		}
