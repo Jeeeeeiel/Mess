@@ -52,6 +52,7 @@ public class AutoDownloaderMultiThread {
 	private static String nextWorkDate = null;
 	private static String beginTime = "";
 	private static List<PDF> pdfs = new ArrayList<PDF>();
+	private static boolean isAnyAccountAvaliable = true;
 	
 	static{//Initionalize thread amount
 		Properties props = new Properties();
@@ -249,7 +250,7 @@ public class AutoDownloaderMultiThread {
 					forceQuit(Proxy.NOPROXYAVALIABLE);
 				}
 				if(account.equals(Account.NOACCOUNTAVALIABLE)){
-					forceQuit(Account.NOACCOUNTAVALIABLE);
+					isAnyAccountAvaliable = false;
 				}
 				
 				/*Connection conn = Jsoup.connect(url.replaceAll("abc=[0-9a-zA-Z]+", "abc=" + account));
@@ -266,8 +267,13 @@ public class AutoDownloaderMultiThread {
 				
 				if(doc.text().contains("浏览上限")){
 					Log.log("Account: " + account + "\t overused!");
-					if(Account.removeCurrentAccount(account).equals(Account.NOACCOUNTAVALIABLE)){
+					/*if(Account.removeCurrentAccount(account).equals(Account.NOACCOUNTAVALIABLE)){
 						forceQuit(Account.NOACCOUNTAVALIABLE);
+					}else{
+						continue;
+					}*/
+					if(Account.removeCurrentAccount(account).equals(Account.NOACCOUNTAVALIABLE)){
+						isAnyAccountAvaliable = false;
 					}else{
 						continue;
 					}
@@ -348,7 +354,7 @@ public class AutoDownloaderMultiThread {
 				public void run() {
 					// TODO Auto-generated method stub;
 					Log.log(Thread.currentThread().getName() + " start");
-					while(hasNextUnhandledPDF()){
+					while(hasNextUnhandledPDF()&&isAnyAccountAvaliable){
 						PDF pdf = nextUnhandledPDF();
 						if(pdf == null){
 							break;
@@ -358,6 +364,9 @@ public class AutoDownloaderMultiThread {
 						while(true){
 							doc = getDocument(pdf.getUrl(), 20000);
 							if(doc.select("iframe[src$=.pdf], iframe[src$=.doc], iframe[src$=.docx]").size()>0){
+								break;
+							}
+							if(!isAnyAccountAvaliable){
 								break;
 							}
 						}
@@ -408,6 +417,10 @@ public class AutoDownloaderMultiThread {
 	
 	public static void download(PDF pdf){
 		if(pdf == null){
+			return;
+		}
+		if(pdf.getUrl().startsWith("http://pdf.hibor.com.cn/UpFile/")){
+			pdf.setDownloaded(true);
 			return;
 		}
 		OutputStream os = null;
