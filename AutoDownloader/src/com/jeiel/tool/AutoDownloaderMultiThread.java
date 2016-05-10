@@ -104,12 +104,13 @@ public class AutoDownloaderMultiThread {
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		if(!isWorkDate()) return;
+		
 		Log.log("Start");
 		Log.log("Initializing...");
 		Log.log("Root Directory: " + Config.ROOT_DIR_PATH);
 		Log.log("URL: "+URL);
 		Log.log("params: "+params);
+		if(!isWorkDate()) return;
 		Proxy.changeProxy();
 		Account.changeAccount();
 		
@@ -177,9 +178,9 @@ public class AutoDownloaderMultiThread {
 			return true;
 		}
 		SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
-		for(int i = 0; i < Holiday.HODILAY.length/2; i++){
-			if(format.format(calendar.getTime()).compareTo(Holiday.HODILAY[i][0]) >= 0 &&
-					format.format(calendar.getTime()).compareTo(Holiday.HODILAY[i][1]) <= 0){
+		for(int i = 0; i < Holiday.holidayList.size(); i++){
+			if(format.format(calendar.getTime()).compareTo(Holiday.holidayList.get(i).split(":")[0]) >= 0 &&
+					format.format(calendar.getTime()).compareTo(Holiday.holidayList.get(i).split(":")[0]) <= 0){
 				return true;
 			}
 		}

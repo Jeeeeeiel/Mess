@@ -11,4 +11,7 @@ public class Config {
 	public static String PROPERTIES_PATH = ROOT_DIR_PATH + "//Custom.properties";
 	
 	public static String EXTERNAL_ARGS_PATH = Config.ROOT_DIR_PATH + "//InitArgs.xml";
+	
+	public static String HOLIDAY_INFO_PATH = Config.ROOT_DIR_PATH + "//Holiday.xml";
+	
 }
