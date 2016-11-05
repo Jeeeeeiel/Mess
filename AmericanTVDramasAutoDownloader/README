@@ -1,0 +1,7 @@
+1.run aria2c as daemon or just run aria2c
+
+2.set download path in Configuration.properties
+
+3.add DramasChecker.jar to crontab
+
+4.Do not change addUri.rb;chmod 777
